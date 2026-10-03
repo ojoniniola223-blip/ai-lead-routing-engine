@@ -1,0 +1,463 @@
+{
+  "name": "AI-Driven Lead Qualification, CRM Logging & Sales Routing Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "b7881b76-7f00-4918-b6ad-461a2461ee55",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        -144
+      ],
+      "id": "10e03ac1-095a-4176-90e5-bbe551fa349c",
+      "name": "Webhook",
+      "webhookId": "b7881b76-7f00-4918-b6ad-461a2461ee55"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an elite AI Sales Development Representative (SDR) responsible for qualifying incoming business leads. \n\nAnalyze the following lead details:\n- Name:{{ $json.name }}\n- Email: {{ $json.email }}\n- Company: {{ $json.company }}\n- Budget: {{ $json.budget }}\n- Message: {{ $json.message }}\n\nCRITERIA FOR EVALUATION:\n1. HOT: Lead has a specific project, an active budget over \\$2,000, and is looking to start within 1-2 months.\n2. WARM: Lead expresses genuine interest in automation, but their budget is unspecified/low, or the timeline is vague.\n3. COLD: Lead is asking for free advice, offers low value, or is a student/job seeker.\n4. INVALID: The message is gibberish, spam, advertising a service to us, or using a clearly fake email.\n\nOUTPUT FORMAT:\nYou must return your response in a strict JSON format. Do not include markdown blocks (like ```json), introduction, or conversational filler. Output exactly like this:\n\n{\n  \"status\": \"HOT\",\n  \"reasoning\": \"Put reasoning here.\",\n  \"lead_pain_point\": \"Put pain point here.\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -288,
+        -144
+      ],
+      "id": "98f655b1-720b-4f3d-8a85-63391914e316",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -304,
+        112
+      ],
+      "id": "ddec947e-8a2f-42dc-b18a-79a9178c7e8c",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "dnMbMsZdD2kctibZ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.output).status }}",
+                    "rightValue": "HOT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5e2585de-bbd8-41b1-8476-b27bb0cb3cf5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "05aac134-0d34-49ed-8c72-886e63580cea",
+                    "leftValue": "={{ JSON.parse($json.output).status }}",
+                    "rightValue": "WARM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "edc6efbe-835a-414d-8873-35ffd6de504a",
+                    "leftValue": "={{ JSON.parse($json.output).status }}",
+                    "rightValue": "COLD",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        160,
+        -160
+      ],
+      "id": "be7c0cf7-b461-4db8-beb1-9cbd40950ba1",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.email }}",
+        "subject": "Let's discuss your automation project",
+        "message": "=Hi {{ $(\"Webhook\").item.json.name }},\n\nThanks for reaching out! \n\nI reviewed your message regarding the automation needs at {{ $(\"Webhook\").item.json.company }}. I would love to help you sync your CRM and onboarding systems to eliminate that manual data entry overhead.\n\nLet's schedule a brief chat next week to map this out.\n\nBest regards,\n[Your Name]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        -288
+      ],
+      "id": "815ef3b2-4942-401b-89a8-eda03f51aa13",
+      "name": "Send a message",
+      "webhookId": "9990dd0d-ace3-42ad-a2e1-b3774543e046",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CV4bakbWL9hJnP81",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0C6LQ82ZTN",
+          "mode": "list",
+          "cachedResultName": "social"
+        },
+        "text": "=⚠️ New WARM Lead Alert ⚠️ * Name: {{ $(\"Webhook\").item.json.body.name }} * Company: {{ $(\"Webhook\").item.json.body.company }} * Budget: {{ $(\"Webhook\").item.json.body.budget }}  AI Evaluation Reasoning:  {{ JSON.parse($json.output).reasoning }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        368,
+        -128
+      ],
+      "id": "502c7ccc-080d-4643-be22-1360f55fbf80",
+      "name": "Send a message1",
+      "webhookId": "a62a4ea3-7a03-4394-8242-5064c88c08d8",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "9z51N58WVnRjQvJQ",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        384,
+        48
+      ],
+      "id": "8c9c0182-ffe3-4faf-9697-4d24944d4123",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "authentication": "airtableOAuth2Api",
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appeKLrANdSPIZLZ7",
+          "mode": "list",
+          "cachedResultName": "AI Sales CRM Dashboard",
+          "cachedResultUrl": "https://airtable.com/appeKLrANdSPIZLZ7"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tbllW4Cr2mGxMp2YF",
+          "mode": "list",
+          "cachedResultName": "Leads Logging",
+          "cachedResultUrl": "https://airtable.com/appeKLrANdSPIZLZ7/tbllW4Cr2mGxMp2YF"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead Name": "={{ $('Webhook').item.json.name }}",
+            "Email Address": "={{ $('Webhook').item.json.email }}",
+            "Company": "={{ $('Webhook').item.json.company }}",
+            "Budget": "={{ $('Webhook').item.json.budget }}",
+            "Extracted Pain Point": "={{ JSON.parse($json.output).lead_pain_point }}",
+            "AI Analysis Reasoning": "={{ JSON.parse($node[\"AI Agent\"].json.output).reasoning }}",
+            "AI Qualification Status": "={{ JSON.parse($json.output).status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead Name",
+              "displayName": "Lead Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Email Address",
+              "displayName": "Email Address",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Todo",
+                  "value": "Todo"
+                },
+                {
+                  "name": "In progress",
+                  "value": "In progress"
+                },
+                {
+                  "name": "Done",
+                  "value": "Done"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Qualification Status",
+              "displayName": "AI Qualification Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "AI Analysis Reasoning",
+              "displayName": "AI Analysis Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Extracted Pain Point",
+              "displayName": "Extracted Pain Point",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Attachment Summary",
+              "displayName": "Attachment Summary",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -144
+      ],
+      "id": "f4c23c56-4bf5-4f47-9112-e1ea3ae3cb07",
+      "name": "Create a record",
+      "credentials": {
+        "airtableOAuth2Api": {
+          "id": "kU3gj2P4VKmm0zQI",
+          "name": "Airtable account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "name": "David Miller",
+          "email": "david@millercounsel.com",
+          "company": "Miller Legal Counsel",
+          "budget": "$750",
+          "message": "Hi, I am looking for someone to build a basic automated link between my contact form and my calendar. I have a very limited budget of around $700 or $800 max. Let me know if you can help."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a record": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7bf7d8de-937c-40e8-8d79-003f219f5b6c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9adbcc5dab2a19e221d53820d769a52508b2a2ac17cee60d0a3b65ceb4a1841e"
+  },
+  "nodeGroups": [],
+  "id": "IdZwbaiTTQeS5jzJ",
+  "tags": []
+}
